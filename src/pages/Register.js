@@ -16,7 +16,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const [verificationStep, setVerificationStep] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
-  
+
   const { register, verifyEmail } = useAuth();
   const navigate = useNavigate();
 
@@ -34,6 +34,7 @@ const Register = () => {
 
     try {
       const additionalData = {};
+
       if (formData.role === 'student') {
         additionalData.phone = formData.phone;
         additionalData.address = formData.address;
@@ -53,24 +54,18 @@ const Register = () => {
         additionalData
       });
 
-      // In development, skip verification and go directly to dashboard
-      if (process.env.NODE_ENV === 'development' || result.user.isVerified) {
-        // Redirect to appropriate dashboard based on role
-        const userRole = result.user?.role;
-        if (userRole === 'student') {
-          navigate('/student/dashboard');
-        } else if (userRole === 'institution') {
-          navigate('/institution/dashboard');
-        } else if (userRole === 'company') {
-          navigate('/company/dashboard');
-        } else if (userRole === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/');
-        }
+      // If email is auto-verified (development), go straight to dashboard
+      if (result.user.isVerified) {
+        const role = result.user.role;
+        if (role === 'student') navigate('/student/dashboard');
+        else if (role === 'institution') navigate('/institution/dashboard');
+        else if (role === 'company') navigate('/company/dashboard');
+        else if (role === 'admin') navigate('/admin/dashboard');
+        else navigate('/');
       } else {
         setVerificationStep(true);
       }
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -85,19 +80,12 @@ const Register = () => {
 
     try {
       const result = await verifyEmail(formData.email, verificationCode);
-      // Redirect to appropriate dashboard based on role
-      const userRole = result.user?.role || formData.role;
-      if (userRole === 'student') {
-        navigate('/student/dashboard');
-      } else if (userRole === 'institution') {
-        navigate('/institution/dashboard');
-      } else if (userRole === 'company') {
-        navigate('/company/dashboard');
-      } else if (userRole === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/');
-      }
+      const role = formData.role;
+      if (role === 'student') navigate('/student/dashboard');
+      else if (role === 'institution') navigate('/institution/dashboard');
+      else if (role === 'company') navigate('/company/dashboard');
+      else if (role === 'admin') navigate('/admin/dashboard');
+      else navigate('/');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -105,42 +93,23 @@ const Register = () => {
     }
   };
 
-  // Development bypass - auto verify and login
   const handleDevBypass = async () => {
     setLoading(true);
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/dev-verify`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: formData.email }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
       });
-      
       const data = await response.json();
-      
       if (data.success) {
-        // Now try to login with the same credentials
-        const result = await register({
-          email: formData.email,
-          password: formData.password,
-          name: formData.name,
-          role: formData.role,
-          additionalData: {}
-        });
-        // Redirect to appropriate dashboard
-        const userRole = result.user?.role || formData.role;
-        if (userRole === 'student') {
-          navigate('/student/dashboard');
-        } else if (userRole === 'institution') {
-          navigate('/institution/dashboard');
-        } else if (userRole === 'company') {
-          navigate('/company/dashboard');
-        } else if (userRole === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/');
-        }
+        // Redirect to dashboard after dev verification
+        const role = formData.role;
+        if (role === 'student') navigate('/student/dashboard');
+        else if (role === 'institution') navigate('/institution/dashboard');
+        else if (role === 'company') navigate('/company/dashboard');
+        else if (role === 'admin') navigate('/admin/dashboard');
+        else navigate('/');
       } else {
         setError(data.error);
       }
@@ -158,10 +127,9 @@ const Register = () => {
           <div className="auth-container">
             <Card title="Verify Your Email" className="auth-card">
               <p>Please check your email for the verification code.</p>
-              
               <div className="verification-help">
                 <p><strong>Development Note:</strong> In development mode, emails are not actually sent.</p>
-                <p>Check your server console for the verification code, or use the button below to bypass verification.</p>
+                <p>Check server console for the verification code or use the button below to bypass verification.</p>
               </div>
 
               <form onSubmit={handleVerification} className="auth-form">
@@ -179,20 +147,10 @@ const Register = () => {
                 </div>
 
                 <div className="verification-actions">
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary btn-full"
-                    disabled={loading}
-                  >
+                  <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
                     {loading ? 'Verifying...' : 'Verify Email'}
                   </button>
-                  
-                  <button 
-                    type="button"
-                    className="btn btn-outline btn-full"
-                    onClick={handleDevBypass}
-                    disabled={loading}
-                  >
+                  <button type="button" className="btn btn-outline btn-full" onClick={handleDevBypass} disabled={loading}>
                     {loading ? 'Processing...' : 'Development Bypass'}
                   </button>
                 </div>
@@ -209,66 +167,27 @@ const Register = () => {
       <div className="container">
         <div className="auth-container">
           <Card title="Create Your Account" className="auth-card">
-            {error && (
-              <div className="alert alert-error">
-                {error}
-              </div>
-            )}
-            
+            {error && <div className="alert alert-error">{error}</div>}
+
             <form onSubmit={handleSubmit} className="auth-form">
               <div className="form-group">
                 <label htmlFor="name" className="form-label">Full Name</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="form-control"
-                  required
-                  placeholder="Enter your full name"
-                />
+                <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} className="form-control" required placeholder="Enter your full name" />
               </div>
 
               <div className="form-group">
                 <label htmlFor="email" className="form-label">Email</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="form-control"
-                  required
-                  placeholder="Enter your email"
-                />
+                <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} className="form-control" required placeholder="Enter your email" />
               </div>
 
               <div className="form-group">
                 <label htmlFor="password" className="form-label">Password</label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="form-control"
-                  required
-                  minLength="6"
-                  placeholder="Enter your password (min 6 characters)"
-                />
+                <input type="password" id="password" name="password" value={formData.password} onChange={handleChange} className="form-control" required minLength="6" placeholder="Enter your password (min 6 characters)" />
               </div>
 
               <div className="form-group">
                 <label htmlFor="role" className="form-label">Account Type</label>
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  className="form-control"
-                  required
-                >
+                <select id="role" name="role" value={formData.role} onChange={handleChange} className="form-control" required>
                   <option value="student">Student</option>
                   <option value="institution">Institution</option>
                   <option value="company">Company</option>
@@ -276,32 +195,16 @@ const Register = () => {
                 </select>
               </div>
 
+              {/* Role-specific fields */}
               {formData.role === 'student' && (
                 <>
                   <div className="form-group">
                     <label htmlFor="phone" className="form-label">Phone Number</label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="form-control"
-                      placeholder="Enter your phone number"
-                    />
+                    <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} className="form-control" placeholder="Enter your phone number" />
                   </div>
-
                   <div className="form-group">
                     <label htmlFor="address" className="form-label">Address</label>
-                    <textarea
-                      id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      className="form-control"
-                      rows="3"
-                      placeholder="Enter your address"
-                    />
+                    <textarea id="address" name="address" value={formData.address} onChange={handleChange} className="form-control" rows="3" placeholder="Enter your address" />
                   </div>
                 </>
               )}
@@ -309,15 +212,7 @@ const Register = () => {
               {formData.role === 'institution' && (
                 <div className="form-group">
                   <label htmlFor="address" className="form-label">Location</label>
-                  <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    className="form-control"
-                    placeholder="Enter institution location"
-                  />
+                  <input type="text" id="address" name="address" value={formData.address} onChange={handleChange} className="form-control" placeholder="Enter institution location" />
                 </div>
               )}
 
@@ -325,45 +220,22 @@ const Register = () => {
                 <>
                   <div className="form-group">
                     <label htmlFor="phone" className="form-label">Industry</label>
-                    <input
-                      type="text"
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="form-control"
-                      placeholder="Enter company industry"
-                    />
+                    <input type="text" id="phone" name="phone" value={formData.phone} onChange={handleChange} className="form-control" placeholder="Enter company industry" />
                   </div>
-
                   <div className="form-group">
                     <label htmlFor="address" className="form-label">Location</label>
-                    <input
-                      type="text"
-                      id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      className="form-control"
-                      placeholder="Enter company location"
-                    />
+                    <input type="text" id="address" name="address" value={formData.address} onChange={handleChange} className="form-control" placeholder="Enter company location" />
                   </div>
                 </>
               )}
 
-              <button 
-                type="submit" 
-                className="btn btn-primary btn-full"
-                disabled={loading}
-              >
+              <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
                 {loading ? 'Creating Account...' : 'Create Account'}
               </button>
             </form>
 
             <div className="auth-links">
-              <p>
-                Already have an account? <Link to="/login">Login here</Link>
-              </p>
+              <p>Already have an account? <Link to="/login">Login here</Link></p>
             </div>
 
             <div className="auth-info">
